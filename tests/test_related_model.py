@@ -38,3 +38,8 @@ class TestModel(unittest.TestCase):
         obtained_city = City.collection.get('Santiago')
 
         assert isinstance(obtained_city.country, obtained_country.__class__)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        City.collection.all().delete()
+        Country.collection.all().delete()
