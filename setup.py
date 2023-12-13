@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='firedom',
-    version='0.1.0',
+    version='1.0.0',
     description='Simple Firestore ORM',
     url='https://github.com/afuenzalida/firedom',
     author='Andrés Fuenzalida',
