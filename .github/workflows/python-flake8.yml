@@ -1,0 +1,27 @@
+name: Run flake8
+
+on: [push]
+
+jobs:
+  flake8:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 flake8-commas
+      - name: Lint with flake8
+        run: |
+          flake8 . \
+            --count \
+            --max-line-length=100 \
+            --exclude=.git,__pycache__ \
+            --extend-ignore=W605 \
+            --show-source \
+            --statistics
