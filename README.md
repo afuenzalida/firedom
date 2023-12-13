@@ -10,17 +10,32 @@ Simple Firestore ORM for Python.
 pip install firedom
 ```
 
-## Usage
-Create an instance of the library's main class:
+## Getting started
+
+#### Initialize Firedom
 
 ```python
+from firedom import Firedom
+
+
 firedom = Firedom(service_account_json_path='your-credentials.json')
 ```
 
-Define the model of your collection by inheriting from the `Model` property of the instance you created:
+#### Define your models
+
+Create a model for your Firestore collection by inheriting from `Model`:
 
 ```python
-@dataclass  # <- Required
+from dataclasses import dataclass
+from firedom import Firedom
+
+
+@dataclass
+class Company(firedom.Model):
+    name: str
+
+
+@dataclass
 class User(firedom.Model):
     username: str
     email: int
@@ -28,29 +43,40 @@ class User(firedom.Model):
     city: str
     is_active: bool = True
     number_of_pets: int = 0
+    company: Company
 
     class Config:
         # Required: Field to be used as document ID
         document_id_field = 'username'
-
-        # Optional: Collection ID
-        collection_id = 'users'
 ```
 
-Manipulate the documents in your collection:
+## Manipulate documents
+
+#### Create
 
 ```python
-# Get a document from the collection
-user = User.collection.get('afuenzalida')
+company = Company.collection.create(name='Example Company')
 
-# Delete a document from the collection
-user = User.collection.get('usuario_malvado')
-user.delete()
+User.collection.create(
+    username='afuenzalida',
+    email='afuenzalida@example.com',
+    country='Chile',
+    city='Santiago',
+    company=company,
+)
+```
 
-# Get all documents in the collection
+#### Retrieve
+
+```python
 users = User.collection.all()
 
-# Filter documents in the collection
+user = User.collection.get('afuenzalida')
+```
+
+#### Filter
+
+```python
 users = User.collection.where(
     User.country == 'Chile',
     User.is_active == True,
@@ -59,17 +85,30 @@ users = User.collection.where(
 )
 ```
 
-Chain queries:
+#### Sort
 
 ```python
-# Sort the documents obtained in a query:
 users = User.collection.where(
     User.country == 'Chile',
 ).order_by(
     'email',
     desc=True,
 )
+```
 
-# Delete documents obtained in a query:
-users = User.collection.all().delete()
+#### Update
+
+```python
+user = User.collection.get('afuenzalida')
+user.country = 'Australia'
+user.save()
+```
+
+#### Delete
+
+```python
+user = User.collection.get('afuenzalida')
+user.delete()
+
+User.collection.all().delete()
 ```
