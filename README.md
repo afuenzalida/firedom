@@ -1,5 +1,5 @@
 # Firedom
-[![Run tests](https://github.com/afuenzalida/firedom/actions/workflows/python-test.yml/badge.svg)](https://github.com/afuenzalida/firedom/actions/workflows/python-test.yml)
+[![Tests](https://github.com/afuenzalida/firedom/actions/workflows/python-test.yml/badge.svg?branch=main)](https://github.com/afuenzalida/firedom/actions/workflows/python-test.yml)
 
 
 Simple Firestore ORM for Python.
