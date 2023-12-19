@@ -92,8 +92,8 @@ class TestModel(unittest.TestCase):
         records = User.collection.where(
             (User.number_of_pets == 0) &
             (
-                User.country == 'Chile' |
-                User.country == 'Bolivia'
+                (User.country == 'Chile') |
+                (User.country == 'Bolivia')
             ),
         )
         assert len(records) == 2
