@@ -1,15 +1,17 @@
 import dataclasses
+import types
 
 from typing import (
-    TYPE_CHECKING,
+    Any,
+    get_origin,
     Self,
+    TYPE_CHECKING,
 )
 
 from .collection import Collection
 from .field import (
     Field,
     FieldFactory,
-    RelatedField,
 )
 
 
@@ -32,13 +34,17 @@ class Model:
         collection_id: str | int | None = None
 
     def __init_subclass__(cls) -> None:
+        current_repr = cls.__repr__
+
         dataclasses.dataclass(cls)
+
+        cls.__repr__ = current_repr
 
         cls.__validate_document_id_field()
 
-        fields_definition = cls.__get_fields_definition()
-        cls.collection = cls.__build_collection_instance(fields_definition)
-        cls.__set_fields(fields_definition)
+        fields_definitions = FieldFactory.generate_fields_definitions(cls)
+        cls.collection = cls.__build_collection_instance(fields_definitions)
+        cls.__set_fields(fields_definitions)
 
         super().__init_subclass__()
 
@@ -64,32 +70,6 @@ class Model:
         return collection
 
     @classmethod
-    def __get_fields_definition(cls) -> None:
-        parsed_fields = {}
-
-        for name, field in cls.__dataclass_fields__.items():
-            if not field.kw_only:
-                default_value = None
-
-                if not isinstance(field.default, dataclasses._MISSING_TYPE):
-                    default_value = field.default
-
-                if Model in field.type.__bases__:
-                    parsed_fields[name] = RelatedField(
-                        name=name,
-                        field_type=field.type,
-                        default_value=default_value,
-                    )
-                else:
-                    parsed_fields[name] = FieldFactory.create_field(
-                        name=name,
-                        field_type=field.type,
-                        default_value=default_value,
-                    )
-
-        return parsed_fields
-
-    @classmethod
     def __set_fields(cls, fields_definition: dict[str, Field]) -> None:
         for name, field in fields_definition.items():
             setattr(cls, name, field)
@@ -102,9 +82,9 @@ class Model:
             )
         document_id_field = cls.__dataclass_fields__[cls.Config.document_id_field]
 
-        if document_id_field.type not in (str, int):
+        if document_id_field.type != str:
             raise TypeError(
-                f"Document ID field value must be of type {str} or {int}. "
+                f"Document ID field value must be of type {str}. "
                 f"Current type: {document_id_field.type}.",
             )
 
@@ -114,7 +94,10 @@ class Model:
             if key in cls.collection.fields.keys():
                 expected_type = cls.collection.fields[key].field_type
 
-                if type(value) is not expected_type:
+                if isinstance(expected_type, types.GenericAlias):
+                    expected_type = get_origin(expected_type)
+
+                if expected_type != Any and type(value) is not expected_type:
                     raise TypeError(
                         f"Argument \"{key}\" must be of type {expected_type}. "
                         f"Current type: {type(value)}.",
@@ -145,7 +128,7 @@ class Model:
 
         return cls(**fixed_dict)
 
-    def to_dict(self) -> dict[str, any]:
+    def to_dict(self) -> dict[str, Any]:
         registered_fields = self.__class__.collection.fields
 
         registered_fields_values = {}
@@ -173,14 +156,11 @@ class Model:
         self.from_db_dict(document.to_dict())
         self._is_sync = True
 
-    def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}"
-            f"({self.Config.document_id_field}={self.document_id})"
-        )
-
     def __str__(self) -> str:
         return (
             f"{self.__class__.__name__}"
             f"({self.Config.document_id_field}={self.document_id})"
         )
+
+    def __repr__(self) -> str:
+        return str(self)

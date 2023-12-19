@@ -1,3 +1,5 @@
+import dataclasses
+
 from datetime import datetime
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 from google.cloud.firestore_v1 import FieldFilter
@@ -12,42 +14,42 @@ if TYPE_CHECKING:
 
 
 class Field:
-    def __init__(self, name: str, field_type: type, default_value: any = None) -> None:
-        self.name = name
+    def __init__(self, name: str, field_type: type, default_value: Any = None) -> None:
+        self._name = name
         self.field_type = field_type
         self.default_value = default_value
 
     def __eq__(self, value: Any) -> FieldFilter:
-        return FieldFilter(self.name, '==', value)
+        return FieldFilter(self._name, '==', value)
 
     def __ne__(self, value: Any) -> FieldFilter:
-        return FieldFilter(self.name, '!=', value)
+        return FieldFilter(self._name, '!=', value)
 
     def __lt__(self, value: Any) -> FieldFilter:
-        return FieldFilter(self.name, '<', value)
+        return FieldFilter(self._name, '<', value)
 
     def __le__(self, value: Any) -> FieldFilter:
-        return FieldFilter(self.name, '<=', value)
+        return FieldFilter(self._name, '<=', value)
 
     def __gt__(self, value: Any) -> FieldFilter:
-        return FieldFilter(self.name, '>', value)
+        return FieldFilter(self._name, '>', value)
 
     def __ge__(self, value: Any) -> FieldFilter:
-        return FieldFilter(self.name, '>=', value)
+        return FieldFilter(self._name, '>=', value)
 
     def __hash__(self) -> None:
         pass
 
-    def is_in(self, values: list[any]) -> FieldFilter:
-        return FieldFilter(self.name, 'in', values)
+    def is_in(self, values: list[Any]) -> FieldFilter:
+        return FieldFilter(self._name, 'in', values)
 
-    def is_not_in(self, values: list[any]) -> FieldFilter:
-        return FieldFilter(self.name, 'not-in', values)
+    def is_not_in(self, values: list[Any]) -> FieldFilter:
+        return FieldFilter(self._name, 'not-in', values)
 
-    def to_db_value(self, value: any) -> any:
+    def to_db_value(self, value: Any) -> Any:
         return value
 
-    def to_python_value(self, value: any) -> any:
+    def to_python_value(self, value: Any) -> Any:
         return value
 
 
@@ -57,10 +59,10 @@ class DatetimeField(Field):
 
 
 class RelatedField(Field):
-    def to_db_value(self, value: 'Model') -> any:
+    def to_db_value(self, value: 'Model') -> Any:
         return value.document_id
 
-    def to_python_value(self, value: 'Model') -> any:
+    def to_python_value(self, value: 'Model') -> Any:
         return self.field_type.collection.get(value)
 
 
@@ -74,3 +76,29 @@ class FieldFactory:
         field_class = cls.FIELDS_MAPPING.get(kwargs.get('field_type'), Field)
 
         return field_class(**kwargs)
+
+    @classmethod
+    def generate_fields_definitions(cls, model_class: type['Model']) -> dict[str, Field]:
+        fields_definitions = {}
+
+        for name, field in model_class.__dataclass_fields__.items():
+            if not field.kw_only:
+                default_value = None
+
+                if not isinstance(field.default, dataclasses._MISSING_TYPE):
+                    default_value = field.default
+
+                if any(parent_class.__name__ == 'Model' for parent_class in field.type.__bases__):
+                    fields_definitions[name] = RelatedField(
+                        name=name,
+                        field_type=field.type,
+                        default_value=default_value,
+                    )
+                else:
+                    fields_definitions[name] = cls.create_field(
+                        name=name,
+                        field_type=field.type,
+                        default_value=default_value,
+                    )
+
+        return fields_definitions

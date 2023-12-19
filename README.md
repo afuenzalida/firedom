@@ -30,6 +30,9 @@ from dataclasses import dataclass
 from firedom import Firedom
 
 
+firedom = Firedom(service_account_json_path='your-credentials.json')
+
+
 @dataclass
 class Company(firedom.Model):
     name: str
@@ -57,7 +60,7 @@ class User(firedom.Model):
 ```python
 company = Company.collection.create(name='Example Company')
 
-User.collection.create(
+user = User.collection.create(
     username='afuenzalida',
     email='afuenzalida@example.com',
     country='Chile',

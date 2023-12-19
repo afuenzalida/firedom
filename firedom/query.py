@@ -1,14 +1,14 @@
 from typing import (
     TYPE_CHECKING,
+    Any,
     Self,
 )
+from google.cloud.firestore_v1.aggregation import AggregationQuery
+from google.cloud.firestore_v1.query import Query as FirestoreQuery
 
 
 if TYPE_CHECKING:
-    from google.cloud.firestore_v1 import (
-        FieldFilter,
-        Query as FirestoreQuery,
-    )
+    from google.cloud.firestore_v1 import FieldFilter
 
     from model import Model
 
@@ -22,16 +22,13 @@ class Query(list):
         self,
         records: list['Model'],
         model_class: type['Model'],
-        query: 'FirestoreQuery' = None,
+        query: FirestoreQuery = None,
     ) -> None:
         self._model_class = model_class
-        self._query = query
+        self._query = query if query else self._model_class.collection.firestore_collection_ref
         super().__init__(records)
 
     def eval(self) -> Self:
-        if not self._query:
-            self._query = self._model_class.collection.firestore_collection_ref
-
         documents = self._query.stream()
         model_instances = []
 
@@ -45,9 +42,6 @@ class Query(list):
         return self
 
     def where(self, *filters: list['FieldFilter']) -> Self:
-        if not self._query:
-            self._query = self._model_class.collection.firestore_collection_ref
-
         for filter_ in filters:
             self._query = self._query.where(filter=filter_)
 
@@ -58,22 +52,32 @@ class Query(list):
     def order_by(self, field: str, desc: bool = False) -> Self:
         direction = DESCENDING if desc else ASCENDING
 
-        if not self._query:
-            self._query = self._model_class.collection.firestore_collection_ref
-
         self._query = self._query.order_by(field, direction=direction)
         self.eval()
 
         return self
 
     def limit(self, amount: int) -> Self:
-        if not self._query:
-            self._query = self._model_class.collection.firestore_collection_ref
-
         self._query = self._query.limit(amount)
         self.eval()
 
         return self
+
+    def count(self) -> int:
+        if isinstance(self._query, FirestoreQuery):
+            aggregate_query = AggregationQuery(self._query)
+        else:
+            aggregate_query = self._query._aggregation_query()
+
+        aggregate_query.count(alias='count')
+        count_value = aggregate_query.get()[0][0].value
+
+        return count_value
+
+    def pluck(self, field_name: str) -> list[Any]:
+        values = [getattr(record, field_name) for record in self]
+
+        return values
 
     def delete(self) -> None:
         for record in self:
