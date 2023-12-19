@@ -2,15 +2,44 @@ import dataclasses
 
 from datetime import datetime
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
-from google.cloud.firestore_v1 import FieldFilter
+from google.cloud.firestore_v1 import (
+    And as FirestoreAnd,
+    FieldFilter as FirestoreFieldFilter,
+    Or as FirestoreOr,
+)
 from typing import (
     Any,
     TYPE_CHECKING,
+    Union,
 )
 
 
 if TYPE_CHECKING:
     from firedom.model import Model
+
+
+class Or(FirestoreOr):
+    def __or__(self, value: Union['FieldFilter', 'And', 'Or']) -> 'Or':
+        return Or(filters=[self, value])
+
+    def __and__(self, value: Union['FieldFilter', 'And', 'Or']) -> 'And':
+        return And(filters=[self, value])
+
+
+class And(FirestoreAnd):
+    def __or__(self, value: Union['FieldFilter', 'And', 'Or']) -> Or:
+        return Or(filters=[self, value])
+
+    def __and__(self, value: Union['FieldFilter', 'And', 'Or']) -> 'And':
+        return And(filters=[self, value])
+
+
+class FieldFilter(FirestoreFieldFilter):
+    def __or__(self, value: Union['FieldFilter', 'And', 'Or']) -> Or:
+        return Or(filters=[self, value])
+
+    def __and__(self, value: Union['FieldFilter', 'And', 'Or']) -> And:
+        return And(filters=[self, value])
 
 
 class Field:

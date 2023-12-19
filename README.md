@@ -80,11 +80,33 @@ user = User.collection.get('afuenzalida')
 #### Filter
 
 ```python
+# All arguments are considered as AND:
 users = User.collection.where(
     User.country == 'Chile',
     User.is_active == True,
     User.city.is_in(['Santiago', 'Valparaíso']),
     User.number_of_pets > 1,
+)
+
+# You can filter with OR using the | operator:
+users = User.collection.where(
+    (User.country == 'Chile') |
+    (User.country == 'China'),
+)
+
+# And you can also filter explicitly with AND using the & operator:
+users = User.collection.where(
+    (User.city == 'Santiago') &
+    (User.city == 'Chicago'),
+)
+
+# Full example: Filter by active users from Chile or China:
+users = User.collection.where(
+    (User.is_active == True) &
+    (
+        (User.country == 'Chile') |
+        (User.country == 'China')
+    ),
 )
 ```
 

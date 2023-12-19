@@ -77,6 +77,27 @@ class TestModel(unittest.TestCase):
         records = User.collection.where(User.country == 'Chile', User.number_of_pets == 3)
         assert len(records) == 1
 
+        records = User.collection.where(
+            (User.country == 'Chile') |
+            (User.country == 'Argentina'),
+        )
+        assert len(records) == 3
+
+        records = User.collection.where(
+            (User.country == 'Chile') &
+            (User.number_of_pets == 3),
+        )
+        assert len(records) == 1
+
+        records = User.collection.where(
+            (User.number_of_pets == 0) &
+            (
+                User.country == 'Chile' |
+                User.country == 'Bolivia'
+            ),
+        )
+        assert len(records) == 2
+
     def test_limit_query(self) -> None:
         records = User.collection.all().limit(2)
         assert len(records) == 2
