@@ -24,16 +24,16 @@ class Query(list):
         model_class: type['Model'],
         query: FirestoreQuery = None,
     ) -> None:
-        self._model_class = model_class
-        self._query = query if query else self._model_class.collection.firestore_collection_ref
+        self.model_class = model_class
+        self.query = query if query else self.model_class.collection.firestore_collection_ref
         super().__init__(records)
 
     def eval(self) -> Self:
-        documents = self._query.stream()
+        documents = self.query.stream()
         model_instances = []
 
         for document in documents:
-            model_instance = self._model_class.from_db_dict(document.to_dict())
+            model_instance = self.model_class.from_db_dict(document.to_dict())
             model_instance._is_sync = True
             model_instances.append(model_instance)
 
@@ -43,7 +43,7 @@ class Query(list):
 
     def where(self, *filters: list['FieldFilter']) -> Self:
         for filter_ in filters:
-            self._query = self._query.where(filter=filter_)
+            self.query = self.query.where(filter=filter_)
 
         self.eval()
 
@@ -52,22 +52,22 @@ class Query(list):
     def order_by(self, field: str, desc: bool = False) -> Self:
         direction = DESCENDING if desc else ASCENDING
 
-        self._query = self._query.order_by(field, direction=direction)
+        self.query = self.query.order_by(field, direction=direction)
         self.eval()
 
         return self
 
     def limit(self, amount: int) -> Self:
-        self._query = self._query.limit(amount)
+        self.query = self.query.limit(amount)
         self.eval()
 
         return self
 
     def count(self) -> int:
-        if isinstance(self._query, FirestoreQuery):
-            aggregate_query = AggregationQuery(self._query)
+        if isinstance(self.query, FirestoreQuery):
+            aggregate_query = AggregationQuery(self.query)
         else:
-            aggregate_query = self._query._aggregation_query()
+            aggregate_query = self.query._aggregation_query()
 
         aggregate_query.count(alias='count')
         count_value = aggregate_query.get()[0][0].value
