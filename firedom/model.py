@@ -26,7 +26,9 @@ if TYPE_CHECKING:
 class Model:
     _is_sync: bool = False
     _firestore_client: 'FirestoreClient' = None
+    _fields: dict[str, Field] = dataclasses.field(default_factory=dict)
 
+    collection_class = Collection
     collection: Collection = None
 
     class Config:
@@ -35,16 +37,15 @@ class Model:
 
     def __init_subclass__(cls) -> None:
         current_repr = cls.__repr__
-
         dataclasses.dataclass(cls)
-
         cls.__repr__ = current_repr
 
         cls.__validate_document_id_field()
 
-        fields_definitions = FieldFactory.generate_fields_definitions(cls)
-        cls.collection = cls.__build_collection_instance(fields_definitions)
-        cls.__set_fields(fields_definitions)
+        cls._fields = FieldFactory.generate_fields_definitions(cls)
+        cls.__set_fields()
+
+        cls.collection = cls.__build_collection_instance()
 
         super().__init_subclass__()
 
@@ -54,24 +55,19 @@ class Model:
         return super().__new__(cls)
 
     @classmethod
-    def __build_collection_instance(cls, fields_definition: dict[str, Field]) -> Collection:
+    def __build_collection_instance(cls) -> Collection:
         collection_id = cls.__name__.lower()
 
         if hasattr(cls.Config, 'collection_id') and cls.Config.collection_id:
             collection_id = cls.Config.collection_id
 
-        collection = Collection(
-            cls,
-            fields_definition,
-            cls.Config.document_id_field,
-            collection_id,
-        )
+        collection = cls.collection_class(cls, collection_id)
 
         return collection
 
     @classmethod
-    def __set_fields(cls, fields_definition: dict[str, Field]) -> None:
-        for name, field in fields_definition.items():
+    def __set_fields(cls) -> None:
+        for name, field in cls._fields.items():
             setattr(cls, name, field)
 
     @classmethod
@@ -91,8 +87,8 @@ class Model:
     @classmethod
     def __validate_field_values(cls, attributes: dict) -> None:
         for key, value in attributes.items():
-            if key in cls.collection.fields.keys():
-                expected_type = cls.collection.fields[key].field_type
+            if key in cls._fields.keys():
+                expected_type = cls._fields[key].field_type
 
                 if isinstance(expected_type, types.GenericAlias):
                     expected_type = get_origin(expected_type)
@@ -122,15 +118,14 @@ class Model:
     @classmethod
     def from_db_dict(cls, dict_: dict) -> Self:
         fixed_dict = {
-            key: cls.collection.fields[key].to_python_value(value)
+            key: cls._fields[key].to_python_value(value)
             for key, value in dict_.items()
         }
 
         return cls(**fixed_dict)
 
     def to_dict(self) -> dict[str, Any]:
-        registered_fields = self.__class__.collection.fields
-
+        registered_fields = self.__class__._fields
         registered_fields_values = {}
 
         for name, field in registered_fields.items():

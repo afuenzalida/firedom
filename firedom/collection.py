@@ -3,7 +3,6 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from .field import Field
 from .query import Query
 
 
@@ -17,16 +16,14 @@ if TYPE_CHECKING:
 
 
 class Collection:
+    query_class = Query
+
     def __init__(
         self,
         model_class: type['Model'],
-        fields: dict[str, Field],
-        document_id_field: str,
         collection_id: str | None = None,
     ) -> None:
         self.model_class = model_class
-        self.fields = fields
-        self.document_id_field = document_id_field
         self.collection_id = (
             collection_id
             if collection_id
@@ -57,26 +54,26 @@ class Collection:
         return document
 
     def all(self) -> Query:
-        query_result = Query([], self.model_class)
+        query_result = self.query_class([], self.model_class)
         query_result.eval()
 
         return query_result
 
     def where(self, *filters: list['FieldFilter']) -> Query:
-        query_result = Query([], self.model_class)
+        query_result = self.query_class([], self.model_class)
         query_result.where(*filters)
 
         return query_result
 
     def first(self) -> 'Model':
-        query_result = Query([], self.model_class)
+        query_result = self.query_class([], self.model_class)
         query_result.eval()
 
         if len(query_result):
             return query_result[0]
 
     def last(self) -> 'Model':
-        query_result = Query([], self.model_class)
+        query_result = self.query_class([], self.model_class)
         query_result.eval()
 
         if len(query_result):
