@@ -1,5 +1,5 @@
 # Firedom
-[![Run tests](https://github.com/afuenzalida/firedom/actions/workflows/python-test.yml/badge.svg)](https://github.com/afuenzalida/firedom/actions/workflows/python-test.yml)
+[![Tests](https://github.com/afuenzalida/firedom/actions/workflows/python-test.yml/badge.svg?branch=main)](https://github.com/afuenzalida/firedom/actions/workflows/python-test.yml)
 
 
 Simple Firestore ORM for Python.
@@ -97,7 +97,7 @@ users = User.collection.where(
 # And you can also filter explicitly with AND using the & operator:
 users = User.collection.where(
     (User.city == 'Santiago') &
-    (User.city == 'Chicago'),
+    (User.number_of_pets == 0),
 )
 
 # Full example: Filter by active users from Chile or China:
