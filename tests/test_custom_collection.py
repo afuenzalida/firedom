@@ -5,25 +5,25 @@ from uuid import uuid4
 
 from firedom import Firedom
 from firedom.collection import Collection
-from firedom.query import Query
+from firedom.utils import hybrid_method
 
 
 firedom = Firedom(service_account_json_path='firebase.json')
 
 
-class UserQuery(Query):
-    def with_pets(self) -> Query:
-        return self.where(self.model_class.number_of_pets > 0)
-
-
 class UserCollection(Collection):
-    query_class = UserQuery
+    @classmethod
+    def second(cls) -> str:
+        return cls.all()[1]
 
-    def test_string(self) -> str:
-        return 'test_string'
+    @hybrid_method
+    def without_pets(self) -> Collection:
+        return self.where(self.model_class.number_of_pets == 0)
 
-    def only_chileans(self) -> UserQuery:
-        return self.where(self.model_class.country == 'Chile')
+    def set_country(self, country: str) -> None:
+        for record in self:
+            record.country = country
+            record.save()
 
 
 @dataclass
@@ -66,16 +66,25 @@ class TestCustomQueryAndCollection(unittest.TestCase):
         for record_data in records_to_create:
             User(**record_data).save()
 
-    def test_custom_collection(self) -> None:
-        test_string = User.collection.test_string()
-        assert test_string == 'test_string'
+    def test_class_method(self) -> None:
+        second_record = User.collection.second()
+        assert second_record.username == records_to_create[1]['username']
 
-        only_chileans_query = User.collection.only_chileans()
-        assert len(only_chileans_query) == 2
+    def test_hybrid_method(self) -> None:
+        users_with_pets = User.collection.without_pets()
+        assert len(users_with_pets) == 2
 
-    def test_custom_query(self) -> None:
-        with_pets_query = User.collection.all().with_pets()
-        assert len(with_pets_query) == 2
+        users_with_pets_from_chile = User.collection.where(
+            User.country == 'Chile',
+        ).without_pets()
+        assert len(users_with_pets_from_chile) == 1
+
+    def test_instance_method(self) -> None:
+        users = User.collection.where(User.country == 'Chile')
+        users.set_country('Brasil')
+
+        for user in users:
+            assert user.country == 'Brasil'
 
     @classmethod
     def tearDownClass(cls) -> None:

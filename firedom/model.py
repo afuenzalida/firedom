@@ -45,7 +45,7 @@ class Model:
         cls._fields = FieldFactory.generate_fields_definitions(cls)
         cls.__set_fields()
 
-        cls.collection = cls.__build_collection_instance()
+        cls.__set_collection_class()
 
         super().__init_subclass__()
 
@@ -55,15 +55,21 @@ class Model:
         return super().__new__(cls)
 
     @classmethod
-    def __build_collection_instance(cls) -> Collection:
+    def __set_collection_class(cls) -> Collection:
         collection_id = cls.__name__.lower()
 
         if hasattr(cls.Config, 'collection_id') and cls.Config.collection_id:
             collection_id = cls.Config.collection_id
 
-        collection = cls.collection_class(cls, collection_id)
+        collection = type(
+            cls.collection_class.__name__,
+            (cls.collection_class,),
+            cls.collection_class.__dict__.copy(),
+        )
+        collection.model_class = cls
+        collection.collection_id = collection_id
 
-        return collection
+        cls.collection = collection
 
     @classmethod
     def __set_fields(cls) -> None:
@@ -105,7 +111,7 @@ class Model:
 
     @property
     def firestore_document_ref(self) -> 'DocumentReference':
-        document_ref = self.__class__.collection.firestore_collection_ref.document(
+        document_ref = self.__class__.collection.get_firestore_collection_ref().document(
             self.document_id,
         )
 
