@@ -20,11 +20,11 @@ class hybrid_method(classmethod):
         instance: Optional['Collection'],
         collection_class: type['Collection'],
     ) -> Callable[..., Any] | Any:
-        if instance:
-            method = super().__get__
-        else:
-            method = self.__func__.__get__
-            collection_class = collection_class([])
-            collection_class.eval()
+        method = super().__get__ if instance is None else self.__func__.__get__
+
+        if not instance:
+            instance = collection_class([])
+            instance.eval()
+            collection_class = instance
 
         return method(instance, collection_class)
