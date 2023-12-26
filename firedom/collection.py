@@ -34,12 +34,18 @@ class Collection(list):
 
     @classmethod
     def get_firestore_collection_ref(cls) -> 'CollectionReference':
+        """
+        Gets the reference of the current collection.
+        """
         collection_ref = cls.model_class._firestore_client.collection(cls.collection_id)
 
         return collection_ref
 
     @classmethod
     def create(cls, **kwargs) -> 'Model':
+        """
+        Create a record with the fields and values received in the `kwargs`.
+        """
         document = cls.model_class(**kwargs)
         document.save()
 
@@ -47,6 +53,9 @@ class Collection(list):
 
     @classmethod
     def all(cls) -> Self:
+        """
+        Gets all records in the collection.
+        """
         class_instance = cls([])
         class_instance.eval()
 
@@ -54,6 +63,9 @@ class Collection(list):
 
     @classmethod
     def get(cls, document_id: str) -> Optional['Model']:
+        """
+        Gets a record based on the document ID.
+        """
         found_document = None
 
         document_ref = cls.get_firestore_collection_ref().document(document_id)
@@ -66,25 +78,38 @@ class Collection(list):
         return found_document
 
     @hybrid_method
-    def where(self_or_cls, *filters: list['FieldFilter']) -> Self:
+    def where(self, *filters: list['FieldFilter']) -> Self:
+        """
+        Filters the documents in the collection or query based on the `filters` received.
+        """
         for filter_ in filters:
-            self_or_cls.query = self_or_cls.query.where(filter=filter_)
+            self.query = self.query.where(filter=filter_)
 
-        self_or_cls.eval()
+        self.eval()
 
-        return self_or_cls
+        return self
 
     @hybrid_method
     def first(self) -> Optional['Model']:
+        """
+        Gets the first record in the collection or query.
+        """
         if len(self):
             return self[0]
 
     @hybrid_method
     def last(self) -> Optional['Model']:
+        """
+        Gets the last record in the collection or query.
+        """
         if len(self):
             return self[-1]
 
     def eval(self) -> Self:
+        """
+        Executes the query stored in the instance
+        and transforms the documents into `Model` instances.
+        """
         documents = self.query.stream()
         model_instances = []
 
@@ -98,6 +123,10 @@ class Collection(list):
         return self
 
     def order_by(self, field: str, desc: bool = False) -> Self:
+        """
+        Sorts the documents in the collection or query based on `field`
+        in ascending order (default) or descending order with `desc`.
+        """
         direction = DESCENDING if desc else ASCENDING
 
         self.query = self.query.order_by(field, direction=direction)
@@ -106,12 +135,18 @@ class Collection(list):
         return self
 
     def limit(self, amount: int) -> Self:
+        """
+        Limits documents in the collection based on `amount`.
+        """
         self.query = self.query.limit(amount)
         self.eval()
 
         return self
 
     def count(self) -> int:
+        """
+        Count the documents in the collection or query.
+        """
         if isinstance(self.query, FirestoreQuery):
             aggregate_query = AggregationQuery(self.query)
         else:
@@ -123,11 +158,17 @@ class Collection(list):
         return count_value
 
     def pluck(self, field_name: str) -> list[Any]:
+        """
+        Gets the value of each document from the field specified in `field_name`.
+        """
         values = [getattr(record, field_name) for record in self]
 
         return values
 
     def delete(self) -> None:
+        """
+        Removes documents from the current collection or query.
+        """
         for record in self:
             record.delete()
 

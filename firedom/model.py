@@ -152,6 +152,8 @@ class Model:
         if self._is_sync:
             self.firestore_document_ref.delete()
 
+        del self
+
     def refresh_from_db(self) -> None:
         document = self.firestore_document_ref.get()
         self.from_db_dict(document.to_dict())
